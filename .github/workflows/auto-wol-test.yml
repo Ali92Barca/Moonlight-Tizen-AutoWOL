@@ -1,0 +1,40 @@
+name: AutoWOL Tizen Test Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/auto-wol-on-launch
+    paths:
+      - 'wasm/**'
+      - 'res/**'
+      - 'Dockerfile'
+      - '.github/workflows/auto-wol-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build Moonlight Tizen Standard WGT
+        run: |
+          docker build --build-arg BUILD_TYPE=development --build-arg REPO_OWNER="${{ github.repository_owner }}" --build-arg REPO_NAME="${{ github.event.repository.name }}" --build-arg FORCE_GAME_MODE=false -t moonlight-autowol:test .
+      - name: Extract WGT
+        run: |
+          id=$(docker create moonlight-autowol:test)
+          docker cp "$id:/home/moonlight/Moonlight.wgt" ./Moonlight-AutoWOL-test.wgt
+          docker rm "$id"
+      - name: Upload test WGT (not a public release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moonlight-AutoWOL-test
+          path: Moonlight-AutoWOL-test.wgt
+          if-no-files-found: error
+          retention-days: 7
