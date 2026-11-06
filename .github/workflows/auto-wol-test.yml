@@ -23,6 +23,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Check AutoWOL JavaScript syntax and integration
+        run: |
+          node --check wasm/platform/index.js
+          node --check wasm/static/js/utils.js
+          grep -q "Launch wake request sent" wasm/platform/index.js
+          grep -q "sendWOL: function()" wasm/static/js/utils.js
       - name: Build Moonlight Tizen Standard WGT
         run: |
           docker build --build-arg BUILD_TYPE=development --build-arg REPO_OWNER="${{ github.repository_owner }}" --build-arg REPO_NAME="${{ github.event.repository.name }}" --build-arg FORCE_GAME_MODE=false -t moonlight-autowol:test .
