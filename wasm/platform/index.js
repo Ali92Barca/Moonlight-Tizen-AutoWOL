@@ -4405,27 +4405,23 @@ function loadHTTPCertsCb() {
           addHostToGrid(revivedHost);
         }
         isHostsLoaded = true;
-        // AutoWOL: wake exactly one locally configured host when Moonlight launches.
-        // Reuse Moonlight's existing per-host Auto WOL toggle; never embed a MAC in source.
-        // If multiple hosts have the toggle enabled, do nothing to avoid waking the wrong PC.
-        var launchWolTargets = Object.keys(hosts).map(function(uid) { return hosts[uid]; })
-          .filter(function(host) { return host.autoWolEnabled === true; });
-        if (launchWolTargets.length === 1) {
-          var launchWolHost = launchWolTargets[0];
-          if (launchWolHost.macAddress && typeof launchWolHost.sendWOL === 'function') {
-            Promise.resolve().then(function() {
-              return launchWolHost.sendWOL();
-            }).then(function() {
-              console.log('[AutoWOL] Launch wake request sent');
-            }).catch(function(err) {
-              console.warn('[AutoWOL] Launch wake request failed:', err);
-            });
-          } else {
-            console.warn('[AutoWOL] Target has no MAC address or WOL support');
+        // AutoWOL: wake all locally registered hosts with per-host Auto WOL enabled.
+        // MAC addresses are stored on the TV, never in this public repository.
+        Object.keys(hosts).forEach(function(uid) {
+          var host = hosts[uid];
+          if (host.autoWolEnabled !== true) return;
+          if (!host.macAddress || typeof host.sendWOL !== 'function') {
+            console.warn('[AutoWOL] Skipping host without MAC or WOL support');
+            return;
           }
-        } else if (launchWolTargets.length > 1) {
-          console.warn('[AutoWOL] Multiple enabled hosts; skipping launch WOL');
-        }
+          Promise.resolve().then(function() {
+            return host.sendWOL();
+          }).then(function() {
+            console.log('[AutoWOL] Launch wake request sent');
+          }).catch(function(err) {
+            console.warn('[AutoWOL] Launch wake request failed:', err);
+          });
+        });
         // Load stored preview app lists and update Smart Hub Preview tiles.
         // Using the persisted list avoids requiring live host connections at startup.
         getData('previewApps', function(storedPreview) {
